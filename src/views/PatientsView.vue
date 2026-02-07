@@ -1,14 +1,11 @@
-<template lang="">
+<template>
    <div>
-      
+      <PatientsComponent />
    </div>
 </template>
-<script>
-export default {
-   components
-   
-}
+<script setup>
+import PatientsComponent from '@/components/PatientsComponent.vue';
 </script>
-<style lang="">
+<style>
    
 </style>

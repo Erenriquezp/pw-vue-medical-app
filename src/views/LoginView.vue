@@ -1,13 +1,11 @@
-<template lang="">
+<template>
    <div>
-      
+      <LoginComponent />
    </div>
 </template>
-<script>
-export default {
-   
-}
+<script setup>
+import LoginComponent from '@/components/LoginComponent.vue';
 </script>
-<style lang="">
+<style>
    
 </style>

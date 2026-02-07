@@ -5,19 +5,26 @@ import { RouterLink, RouterView } from 'vue-router'
 <template>
   <header>
     <div class="wrapper">
-      <nav>
-        <RouterLink to="/">Home</RouterLink>
-        <RouterLink to="/appointments">Appointments</RouterLink>
-        <RouterLink to="/doctors">Doctors</RouterLink>
-        <RouterLink to="/patients">Patients</RouterLink>
+      <nav class="navbar">
+        <div class="brand">🏥 MediCare System</div>        
+        <div class="menu">
+          <RouterLink to="/">Dashboard</RouterLink>
+          <RouterLink to="/doctors">Doctors</RouterLink>
+          <RouterLink to="/patients">Patients</RouterLink>
+          <RouterLink to="/appointments">Appointments</RouterLink>
+          <button @click="logout" class="btn-logout">Logout</button>
+        </div>
       </nav>
     </div>
   </header>
 
-  <RouterView />
+  <main>
+    <RouterView />
+  </main>
 </template>
 
 <style scoped>
+
 header {
   line-height: 1.5;
   max-height: 100vh;
@@ -48,4 +55,33 @@ nav a:first-of-type {
   border: 0;
 }
 
+.navbar {
+  padding: 1rem 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.brand { 
+  font-size: 1.5rem; 
+  font-weight: bold; 
+}
+
+.menu a.router-link-active { 
+  color: var(--primary); 
+  border-bottom: 2px solid var(--primary); 
+}
+
+.btn-logout {
+  background: none; 
+  border: 1px solid var(--danger); 
+  color: var(--danger);
+  padding: 0.5rem 1rem; 
+  border-radius: 4px; 
+  cursor: pointer;
+}
+.btn-logout:hover { 
+  background: var(--danger); 
+}
 </style>

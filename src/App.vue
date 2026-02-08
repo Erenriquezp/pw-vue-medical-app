@@ -1,18 +1,16 @@
-<script setup>
-import { RouterLink, RouterView } from 'vue-router'
-</script>
-
 <template>
-  <header>
+  <header header v-if="$route.name !== 'login'">
     <div class="wrapper">
       <nav class="navbar">
-        <div class="brand">🏥 MediCare System</div>        
+        <div class="brand">🏥 MediCare System</div>
         <div class="menu">
-          <RouterLink to="/">Home</RouterLink>
-          <RouterLink to="/doctors">Doctors</RouterLink>
-          <RouterLink to="/patients">Patients</RouterLink>
-          <RouterLink to="/appointments">Appointments</RouterLink>
-          <button @click="logout" class="btn-logout">Logout</button>
+          <RouterLink to="/">Inicio</RouterLink>
+          <RouterLink to="/doctors">Doctores</RouterLink>
+          <RouterLink to="/patients">Pacientes</RouterLink>
+          <RouterLink to="/appointments">Citas</RouterLink>
+          <button @click="handleLogout" class="btn-logout" :disabled="isLoggingOut">
+            {{ isLoggingOut ? 'Cerrando sesión...' : 'Cerrar sesión' }}
+          </button>
         </div>
       </nav>
     </div>
@@ -23,65 +21,26 @@ import { RouterLink, RouterView } from 'vue-router'
   </main>
 </template>
 
-<style scoped>
+<script setup>
+import { ref } from 'vue';
+import { useRouter } from 'vue-router';
+import { logOut } from './clients/AuthorizationClient';
 
-header {
-  line-height: 1.5;
-  max-height: 100vh;
-}
+const router = useRouter();
+const isLoggingOut = ref(false);
 
-nav {
-  width: 100%;
-  font-size: 12px;
-  text-align: center;
-  margin-top: 2rem;
-}
-
-nav a.router-link-exact-active {
-  color: var(--color-text);
-}
-
-nav a.router-link-exact-active:hover {
-  background-color: transparent;
-}
-
-nav a {
-  display: inline-block;
-  padding: 0 1rem;
-  border-left: 1px solid var(--color-border);
-}
-
-nav a:first-of-type {
-  border: 0;
-}
-
-.navbar {
-  padding: 1rem 2rem;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
-.brand { 
-  font-size: 1.5rem; 
-  font-weight: bold; 
-}
-
-.menu a.router-link-active { 
-  color: var(--primary); 
-  border-bottom: 2px solid var(--primary); 
-}
-
-.btn-logout {
-  background: none; 
-  border: 1px solid var(--danger); 
-  color: var(--danger);
-  padding: 0.5rem 1rem; 
-  border-radius: 4px; 
-  cursor: pointer;
-}
-.btn-logout:hover { 
-  background: var(--danger); 
-}
-</style>
+const handleLogout = async () => {
+  if (isLoggingOut.value) return;
+  
+  try {
+    isLoggingOut.value = true;
+    
+    logOut();
+    await router.push('/login');
+  } catch (error) {
+    console.error('Error durante el logout:', error);
+  } finally {
+    isLoggingOut.value = false;
+  }
+};
+</script>

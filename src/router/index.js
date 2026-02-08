@@ -9,28 +9,54 @@ const router = createRouter({
       path: '/',
       name: 'home',
       component: HomeView,
+      meta: {
+        requireAuthorization: true,
+      }
     },
     {
       path: '/login',
       name: 'login',
-      component: LoginView
+      component: LoginView,
     },
     {
       path: '/appointments',
       name: 'appointments',
       component: () => import('../views/AppointmentsView.vue'),
+      meta: {
+        requireAuthorization: true,
+      }
     },
     {
       path: '/doctors',
       name: 'doctors',
       component: () => import('../views/DoctorsView.vue'),
+      meta: {
+        requireAuthorization: true,
+      }
     },
     {
       path: '/patients',
       name: 'patients',
       component: () => import('../views/PatientsView.vue'),
+      meta: {
+        requireAuthorization: true,
+      }
     },
   ],
-})
+});
+
+router.beforeEach((to, from, next) => {
+  if (to.meta.requireAuthorization) {
+    const token = localStorage.getItem('jwt_token');
+    if (token) {
+      next();
+    } else {
+      console.log('Acceso denegado');
+      next({name: 'login'});
+    }
+  } else {
+    next();
+  }
+});
 
 export default router

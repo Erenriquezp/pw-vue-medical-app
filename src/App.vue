@@ -8,7 +8,7 @@ import { RouterLink, RouterView } from 'vue-router'
       <nav class="navbar">
         <div class="brand">🏥 MediCare System</div>        
         <div class="menu">
-          <RouterLink to="/">Dashboard</RouterLink>
+          <RouterLink to="/">Home</RouterLink>
           <RouterLink to="/doctors">Doctors</RouterLink>
           <RouterLink to="/patients">Patients</RouterLink>
           <RouterLink to="/appointments">Appointments</RouterLink>

@@ -21,10 +21,46 @@
             @click="getAll()"
             title="Actualizar lista"
           >
-            🔄
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              class="icon icon-tabler icons-tabler-outline icon-tabler-refresh"
+            >
+              <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+              <path d="M20 11a8.1 8.1 0 0 0 -15.5 -2m-.5 -4v4h4" />
+              <path d="M4 13a8.1 8.1 0 0 0 15.5 2m.5 4v-4h-4" />
+            </svg>
           </button>
           <button class="btn-add" @click="openModal">
-            <span class="btn-icon">👨‍⚕️</span>
+            <span class="btn-icon"
+              ><svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                class="icon icon-tabler icons-tabler-outline icon-tabler-stethoscope"
+              >
+                <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                <path
+                  d="M6 4h-1a2 2 0 0 0 -2 2v3.5a5.5 5.5 0 0 0 11 0v-3.5a2 2 0 0 0 -2 -2h-1"
+                />
+                <path d="M8 15a6 6 0 1 0 12 0v-3" />
+                <path d="M11 3v2" />
+                <path d="M6 3v2" />
+                <path d="M18 10a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" /></svg
+            ></span>
             <span class="btn-text">Nuevo Doctor</span>
           </button>
         </div>
@@ -35,7 +71,24 @@
       <div class="modal">
         <header class="modal-header">
           <h3>{{ isEditing ? 'Editar Doctor' : 'Registrar Nuevo Doctor' }}</h3>
-          <button class="button-secondary" @click="closeModal">Cerrar</button>
+          <button class="button-secondary" @click="closeModal">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              class="icon icon-tabler icons-tabler-outline icon-tabler-x"
+            >
+              <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+              <path d="M18 6l-12 12" />
+              <path d="M6 6l12 12" />
+            </svg>
+          </button>
         </header>
         <div class="modal-body">
           <GenericForm
@@ -85,7 +138,27 @@
                     : 'Editar'
                 "
               >
-                ✏️
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  class="icon icon-tabler icons-tabler-outline icon-tabler-edit"
+                >
+                  <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                  <path
+                    d="M7 7h-1a2 2 0 0 0 -2 2v9a2 2 0 0 0 2 2h9a2 2 0 0 0 2 -2v-1"
+                  />
+                  <path
+                    d="M20.385 6.585a2.1 2.1 0 0 0 -2.97 -2.97l-8.415 8.385v3h3l8.385 -8.415"
+                  />
+                  <path d="M16 5l3 3" />
+                </svg>
               </button>
               <button
                 @click="deleteDoctor(row.id)"
@@ -98,7 +171,28 @@
                     : 'Eliminar'
                 "
               >
-                ❌
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  class="icon icon-tabler icons-tabler-outline icon-tabler-id-off"
+                >
+                  <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                  <path
+                    d="M8 4h10a3 3 0 0 1 3 3v10m-1.437 2.561c-.455 .279 -.99 .439 -1.563 .439h-12a3 3 0 0 1 -3 -3v-10c0 -1.083 .573 -2.031 1.433 -2.559"
+                  />
+                  <path d="M8.175 8.178a2 2 0 1 0 2.646 2.65" />
+                  <path d="M15 8h2" />
+                  <path d="M16 12h1" />
+                  <path d="M7 16h9" />
+                  <path d="M3 3l18 18" />
+                </svg>
               </button>
             </div>
           </template>
@@ -493,6 +587,12 @@ button {
   border-color: var(--color-primary);
   color: var(--color-primary);
   background: rgba(11, 107, 203, 0.08);
+}
+
+.button-secondary svg {
+  width: 1.1rem;
+  height: 1.1rem;
+  stroke: currentColor;
 }
 
 .report-section {

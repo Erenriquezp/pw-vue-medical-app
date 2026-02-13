@@ -1,6 +1,9 @@
 <template>
   <button @click="handleClick" class="action-btn">
-    <span>{{ icon }}</span> {{ label }}
+    <span class="icon-wrapper">
+      <slot name="icon">{{ icon }}</slot>
+    </span>
+    {{ label }}
   </button>
 </template>
 
@@ -9,7 +12,8 @@ export default {
   props: {
     icon: {
       type: String,
-      required: true
+      required: false,
+      default: ''
     },
     label: {
       type: String,
@@ -52,8 +56,17 @@ export default {
   width: 100%;
 }
 
-.action-btn span {
+.icon-wrapper {
   font-size: 1.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.icon-wrapper svg {
+  width: 1.3rem;
+  height: 1.3rem;
+  stroke: currentColor;
 }
 
 .action-btn:hover {

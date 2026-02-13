@@ -1,6 +1,8 @@
 <template>
   <div :class="['stat-card', variant]">
-    <div class="icon">{{ icon }}</div>
+    <div class="icon-wrapper">
+      <slot name="icon">{{ icon }}</slot>
+    </div>
     <div class="info">
       <h3>{{ value }}</h3>
       <p>{{ label }}</p>
@@ -13,7 +15,8 @@ export default {
   props: {
     icon: {
       type: String,
-      required: true
+      required: false,
+      default: ''
     },
     value: {
       type: [Number, String],
@@ -63,7 +66,7 @@ export default {
   border-left-color: var(--color-danger);
 }
 
-.stat-card .icon {
+.stat-card .icon-wrapper {
   font-size: 1.8rem;
   background: var(--color-surface-muted);
   width: 52px;
@@ -72,6 +75,24 @@ export default {
   align-items: center;
   justify-content: center;
   border-radius: 14px;
+}
+
+.stat-card .icon-wrapper svg {
+  width: 1.8rem;
+  height: 1.8rem;
+  stroke: var(--color-text);
+}
+
+.stat-card.blue .icon-wrapper svg {
+  stroke: var(--color-primary);
+}
+
+.stat-card.green .icon-wrapper svg {
+  stroke: var(--color-accent);
+}
+
+.stat-card.orange .icon-wrapper svg {
+  stroke: var(--color-danger);
 }
 
 .stat-card h3 {

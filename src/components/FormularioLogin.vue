@@ -3,7 +3,23 @@
     <div class="form-group">
       <label for="username">Usuario</label>
       <div class="input-wrapper">
-        <span class="icon">👤</span>
+        <span class="icon"
+          ><svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            class="icon icon-tabler icons-tabler-outline icon-tabler-user"
+          >
+            <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+            <path d="M8 7a4 4 0 1 0 8 0a4 4 0 0 0 -8 0" />
+            <path d="M6 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2" /></svg
+        ></span>
         <input
           id="username"
           v-model="credentials.username"
@@ -18,7 +34,26 @@
     <div class="form-group">
       <label for="password">Contraseña</label>
       <div class="input-wrapper">
-        <span class="icon">🔒</span>
+        <span class="icon"
+          ><svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            class="icon icon-tabler icons-tabler-outline icon-tabler-lock"
+          >
+            <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+            <path
+              d="M5 13a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v6a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-6"
+            />
+            <path d="M11 16a1 1 0 1 0 2 0a1 1 0 0 0 -2 0" />
+            <path d="M8 11v-4a4 4 0 1 1 8 0v4" /></svg
+        ></span>
         <input
           id="password"
           v-model="credentials.password"
@@ -82,9 +117,21 @@ export default {
 
 .input-wrapper .icon {
   position: absolute;
-  left: 14px;
-  font-size: 1rem;
-  color: var(--color-text-muted);
+  left: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  line-height: 0;
+}
+
+.input-wrapper .icon svg {
+  width: 1.1rem;
+  height: 1.1rem;
+  stroke: var(--color-text-muted);
+  display: block;
 }
 
 .input-wrapper input {
@@ -104,6 +151,10 @@ export default {
   outline: none;
   border-color: var(--color-primary);
   box-shadow: 0 0 0 3px rgba(11, 107, 203, 0.12);
+}
+
+.input-wrapper:focus-within .icon svg {
+  stroke: var(--color-primary);
 }
 
 /* BOTÓN */

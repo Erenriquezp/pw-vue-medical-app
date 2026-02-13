@@ -8,7 +8,11 @@
           <RouterLink to="/doctors">Doctores</RouterLink>
           <RouterLink to="/patients">Pacientes</RouterLink>
           <RouterLink to="/appointments">Citas</RouterLink>
-          <button @click="handleLogout" class="btn-logout" :disabled="isLoggingOut">
+          <button
+            @click="handleLogout"
+            class="btn-logout"
+            :disabled="isLoggingOut"
+          >
             {{ isLoggingOut ? 'Cerrando sesión...' : 'Cerrar sesión' }}
           </button>
         </div>
@@ -21,26 +25,31 @@
   </main>
 </template>
 
-<script setup>
-import { ref } from 'vue';
-import { useRouter } from 'vue-router';
-import { logOut } from './clients/AuthorizationClient';
+<script>
+import { logOutFacade } from './clients/AuthorizationClient'
 
-const router = useRouter();
-const isLoggingOut = ref(false);
+export default {
+  name: 'App',
+  data() {
+    return {
+      isLoggingOut: false
+    }
+  },
+  methods: {
+    async handleLogout() {
+      if (this.isLoggingOut) return
 
-const handleLogout = async () => {
-  if (isLoggingOut.value) return;
-  
-  try {
-    isLoggingOut.value = true;
-    
-    logOut();
-    await router.push('/login');
-  } catch (error) {
-    console.error('Error durante el logout:', error);
-  } finally {
-    isLoggingOut.value = false;
+      try {
+        this.isLoggingOut = true
+
+        logOutFacade()
+        await this.$router.push('/login')
+      } catch (error) {
+        console.error('Error durante el logout:', error)
+      } finally {
+        this.isLoggingOut = false
+      }
+    }
   }
-};
+}
 </script>

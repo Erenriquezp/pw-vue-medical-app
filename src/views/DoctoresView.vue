@@ -1,40 +1,123 @@
 <template>
   <div class="container">
     <h2>Doctores</h2>
+    <p class="page-subtitle">
+      Gestiona doctores y mantén su informacion actualizada.
+    </p>
 
     <MessageComponent :text="message?.text" :type="message?.type" />
 
     <div class="card">
       <div class="card-header">
-        <h3>Registrar Nuevo Doctor</h3>
-        <button class="btn-primary" @click="openModal">Nuevo Doctor</button>
+        <div>
+          <h3>Doctores Registrados</h3>
+          <p class="header-subtitle">
+            Administra la información de los doctores
+          </p>
+        </div>
+        <div class="header-actions">
+          <button
+            class="btn-refresh"
+            @click="getAll()"
+            title="Actualizar lista"
+          >
+            🔄
+          </button>
+          <button class="btn-add" @click="openModal">
+            <span class="btn-icon">👨‍⚕️</span>
+            <span class="btn-text">Nuevo Doctor</span>
+          </button>
+        </div>
       </div>
     </div>
     <!-- Modal para el formulario -->
     <div v-if="showModal" class="modal-overlay" @click.self="closeModal">
       <div class="modal">
         <header class="modal-header">
-          <h3>Registrar Nuevo Doctor</h3>
+          <h3>{{ isEditing ? 'Editar Doctor' : 'Registrar Nuevo Doctor' }}</h3>
           <button class="button-secondary" @click="closeModal">Cerrar</button>
         </header>
         <div class="modal-body">
           <GenericForm
+            :key="isEditing ? `edit-${editingId}` : 'new'"
             :fields="doctorFields"
             :initial="nuevoDoctor"
-            submitLabel="Guardar Doctor"
+            :submitLabel="isEditing ? 'Actualizar Doctor' : 'Guardar Doctor'"
+            :showCancel="true"
             @submit="handleFormSubmit"
+            @cancel="closeModal"
           />
         </div>
       </div>
     </div>
     <div class="report-section">
-      <GenericTable :columns="doctorColumns" :rows="doctors" key-field="id" />
+      <div v-if="loading" class="loading-state">Cargando doctores...</div>
+      <div v-else-if="doctors.length === 0" class="empty-state">
+        No hay doctores registrados. Agrega uno nuevo para comenzar.
+      </div>
+      <GenericTable
+        v-else
+        :columns="doctorColumns"
+        :rows="doctors"
+        key-field="id"
+      >
+        <template #cell="{ row, col }">
+          <template v-if="col.field === 'status'">
+            <span
+              :class="[
+                'badge',
+                row.status === 'ACTIVO' ? 'bg-active' : 'bg-inactive'
+              ]"
+            >
+              {{ row.status }}
+            </span>
+          </template>
+          <template v-else-if="col.field === 'actions'">
+            <div class="action-buttons">
+              <button
+                @click="editDoctor(row)"
+                class="btn-action btn-edit"
+                :class="{ 'btn-disabled': row.status !== 'ACTIVO' }"
+                :disabled="row.status !== 'ACTIVO'"
+                :title="
+                  row.status !== 'ACTIVO'
+                    ? 'No se puede editar un doctor inactivo'
+                    : 'Editar'
+                "
+              >
+                ✏️
+              </button>
+              <button
+                @click="deleteDoctor(row.id)"
+                class="btn-action btn-delete"
+                :class="{ 'btn-disabled': row.status !== 'ACTIVO' }"
+                :disabled="row.status !== 'ACTIVO'"
+                :title="
+                  row.status !== 'ACTIVO'
+                    ? 'No se puede eliminar un doctor inactivo'
+                    : 'Eliminar'
+                "
+              >
+                ❌
+              </button>
+            </div>
+          </template>
+          <template v-else>
+            {{ row[col.field] }}
+          </template>
+        </template>
+      </GenericTable>
     </div>
   </div>
 </template>
 
 <script>
-import { createDoctorFacade, getDoctorsFacade } from '@/clients/MedicalClient'
+import {
+  createDoctorFacade,
+  deleteDoctorFacade,
+  getDoctorsFacade,
+  updateDoctorFacade
+} from '@/clients/MedicalClient'
 import MessageComponent from '@/components/MessageComponent.vue'
 import GenericForm from '@/components/GenericForm.vue'
 import GenericTable from '@/components/GenericTable.vue'
@@ -63,7 +146,9 @@ export default {
       ],
       message: null,
       loading: false,
-      showModal: false
+      showModal: false,
+      isEditing: false,
+      editingId: null
     }
   },
   created() {
@@ -74,15 +159,83 @@ export default {
       { field: 'especialidad', label: 'Especialidad' },
       { field: 'email', label: 'Email' },
       { field: 'telefono', label: 'Telefono' },
-      { field: 'numOficina', label: 'Oficina' }
+      { field: 'numOficina', label: 'Oficina' },
+      { field: 'status', label: 'Estado' },
+      { field: 'actions', label: 'Acciones' }
     ]
   },
   methods: {
     openModal() {
+      this.isEditing = false
+      this.editingId = null
+      this.nuevoDoctor = {
+        nombre: '',
+        apellido: '',
+        especialidad: '',
+        email: '',
+        telefono: '',
+        numOficina: ''
+      }
       this.showModal = true
     },
     closeModal() {
       this.showModal = false
+      this.isEditing = false
+      this.editingId = null
+      this.nuevoDoctor = {
+        nombre: '',
+        apellido: '',
+        especialidad: '',
+        email: '',
+        telefono: '',
+        numOficina: ''
+      }
+    },
+    editDoctor(doctor) {
+      // Validar que el doctor esté activo
+      if (doctor.status !== 'ACTIVO') {
+        this.showMessage('No se puede editar un doctor inactivo', 'error')
+        return
+      }
+
+      this.isEditing = true
+      this.editingId = doctor.id
+      this.nuevoDoctor = {
+        nombre: doctor.nombre,
+        apellido: doctor.apellido,
+        especialidad: doctor.especialidad,
+        email: doctor.email,
+        telefono: doctor.telefono,
+        numOficina: doctor.numOficina
+      }
+      this.showModal = true
+    },
+    async deleteDoctor(id) {
+      // Buscar el doctor para validar su estado
+      const doctor = this.doctors.find((d) => d.id === id)
+      if (doctor && doctor.status !== 'ACTIVO') {
+        this.showMessage(
+          'No se puede eliminar un doctor que está inactivo',
+          'error'
+        )
+        return
+      }
+
+      if (!confirm('¿Estás seguro de que deseas eliminar este doctor?')) {
+        return
+      }
+
+      this.loading = true
+      try {
+        await deleteDoctorFacade(id)
+        this.showMessage('Doctor eliminado correctamente.', 'success')
+        await this.getAll()
+      } catch (error) {
+        this.showMessage('Error al eliminar doctor', 'error')
+        console.error('Error deleting doctor:', error)
+      } finally {
+        this.loading = false
+      }
     },
     async getAll() {
       this.loading = true
@@ -105,7 +258,15 @@ export default {
     async handleFormSubmit(payload) {
       this.loading = true
       try {
-        await createDoctorFacade(payload)
+        if (this.isEditing) {
+          await updateDoctorFacade(this.editingId, payload)
+          this.showMessage('Doctor actualizado exitosamente', 'success')
+          await this.getAll()
+        } else {
+          await createDoctorFacade(payload)
+          this.showMessage('Doctor registrado exitosamente', 'success')
+          await this.getAll()
+        }
 
         // Limpiar datos iniciales para resetear el formulario
         this.nuevoDoctor = {
@@ -119,11 +280,11 @@ export default {
 
         // cerrar modal
         this.closeModal()
-
-        this.showMessage('Doctor registrado exitosamente', 'success')
-        await this.getAll()
       } catch (error) {
-        this.showMessage('Error al guardar doctor', 'error')
+        this.showMessage(
+          `Error al ${this.isEditing ? 'actualizar' : 'guardar'} doctor`,
+          'error'
+        )
         console.error('Error saving doctor:', error)
       } finally {
         this.loading = false
@@ -148,19 +309,24 @@ export default {
   margin: 0 auto;
   padding: 24px;
 }
-
 h2 {
-  font-size: 24px;
+  font-size: 2rem;
   font-weight: 700;
-  margin-bottom: 16px;
+  margin-bottom: 8px;
   color: var(--color-text);
 }
 
 h3 {
   font-size: 18px;
   font-weight: 600;
-  margin-bottom: 16px;
+  margin-bottom: 4px;
   color: var(--color-text);
+}
+
+.header-subtitle {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+  margin: 0;
 }
 
 .card {
@@ -176,13 +342,23 @@ h3 {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 16px;
+}
+
+.header-actions {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
 }
 
 .form-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 16px;
+}
+.page-subtitle {
+  color: var(--color-text-muted);
+  margin-bottom: 20px;
+  font-size: 1rem;
 }
 
 .form-group {
@@ -217,6 +393,66 @@ h3 {
 
 button {
   cursor: pointer;
+}
+
+.btn-add {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: linear-gradient(135deg, #0b6bcb 0%, #1a7fd5 100%);
+  color: white;
+  font-size: 0.9rem;
+  font-weight: 600;
+  padding: 0.65rem 1.25rem;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(11, 107, 203, 0.2);
+}
+
+.btn-add:hover {
+  background: linear-gradient(135deg, #0a5bb5 0%, #1670c0 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(11, 107, 203, 0.3);
+}
+
+.btn-add:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 6px rgba(11, 107, 203, 0.2);
+}
+
+.btn-icon {
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+.btn-text {
+  line-height: 1;
+}
+
+.btn-refresh {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-strong);
+  border-radius: 10px;
+  font-size: 1.3rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-refresh:hover {
+  background: rgba(11, 107, 203, 0.08);
+  border-color: var(--color-primary);
+  transform: rotate(180deg);
+}
+
+.btn-refresh:active {
+  transform: rotate(180deg) scale(0.95);
 }
 
 .btn-primary {
@@ -391,5 +627,72 @@ button {
   .report-actions {
     align-items: stretch;
   }
+}
+
+/* Botones de acción en la tabla */
+.action-buttons {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+}
+
+.btn-action {
+  background: transparent;
+  border: 1px solid var(--color-border-strong);
+  padding: 0.35rem 0.6rem;
+  border-radius: var(--radius-sm);
+  font-size: 1rem;
+  cursor: pointer;
+  transition:
+    border 0.2s ease,
+    background 0.2s ease,
+    transform 0.2s ease;
+}
+
+.btn-action:hover {
+  transform: scale(1.1);
+}
+
+.btn-edit:hover {
+  border-color: var(--color-primary);
+  background: rgba(11, 107, 203, 0.08);
+}
+
+.btn-delete:hover {
+  border-color: var(--color-danger);
+  background: rgba(198, 40, 40, 0.08);
+}
+
+.btn-disabled {
+  opacity: 0.4;
+  cursor: not-allowed !important;
+  pointer-events: none;
+}
+
+.btn-disabled:hover {
+  transform: none !important;
+  border-color: var(--color-border-strong) !important;
+  background: transparent !important;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+}
+
+.bg-active {
+  background: rgba(26, 163, 168, 0.16);
+  color: var(--color-accent);
+}
+
+.bg-inactive {
+  background: rgba(198, 40, 40, 0.12);
+  color: var(--color-danger);
 }
 </style>

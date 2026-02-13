@@ -25,30 +25,30 @@ apiClient.interceptors.request.use(
 );
 
 export const getDoctors = async () => {
-   const response = await apiClient.get('/doctors');
+   const response = await apiClient.get('/doctores');
    return response.data;
 }
 
 export const createDoctor = async (doctor) => {
-   return (await apiClient.post('/doctors', doctor)).data;
+   return (await apiClient.post('/doctores', doctor)).data;
 }
 
 export const getPatients = async () => {
-   return (await apiClient.get('/patients')).data;
+   return (await apiClient.get('/pacientes')).data;
 }
 
 export const createPatient = async (patient) => {
-   return (await apiClient.post('/patients', patient)).data;  
+   return (await apiClient.post('/pacientes', patient)).data;  
 }
 
 export const getAppointments = async () => {
-   return (await apiClient.get('/appointments')).data;   
+   return (await apiClient.get('/citas')).data;   
 }
 
 export const createAppointment = async (appointment) => {
-   return (await apiClient.post('/appointments', appointment)).data;
+   return (await apiClient.post('/citas', appointment)).data;
 }
 
 export const cancelAppointment = async (id) => {
-   return (await apiClient.patch(`/appointments/${id}/cancel`)).data;   
+   return (await apiClient.patch(`/citas/${id}/cancelar`)).data;   
 }

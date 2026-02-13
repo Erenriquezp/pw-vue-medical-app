@@ -15,24 +15,24 @@
       </p>
       <form @submit.prevent="saveAppointment" class="form-grid">
         <div class="form-group">
-          <select v-model="newAppointment.doctorId" class="form-control">
+          <select v-model="nuevaCita.doctorId" class="form-control">
             <option value="">Escoger Doctor</option>
             <option v-for="doc in doctors" :value="doc.id">
-              Dr. {{ doc.lastName }} - {{ doc.specialty }}
+              Dr. {{ doc.nombre }} - {{ doc.especialidad }}
             </option>
           </select>
         </div>
         <div class="form-group">
-          <select v-model="newAppointment.patientId" class="form-control">
+          <select v-model="nuevaCita.pacienteId" class="form-control">
             <option value="">Escoger Paciente</option>
-            <option v-for="pat in patients" :value="pat.id">
-              Dr. {{ pat.lastName }} - {{ pat.firstName }}
+            <option v-for="pat in pacientes" :value="pat.id">
+              Dr. {{ pat.nombre }} - {{ pat.apellido }}
             </option>
           </select>
         </div>
         <div class="form-group">
           <input
-            v-model="newAppointment.appointmentDate"
+            v-model="nuevaCita.fechaCita"
             class="form-control"
             type="datetime-local"
             :min="minDateTime"
@@ -55,7 +55,7 @@
     <h3>Lista de Citas</h3>
     <div v-if="loading" class="loading-state">Cargando citas...</div>
     <div v-else-if="error" class="message error">{{ error }}</div>
-    <div v-else-if="appointments.length === 0" class="empty-state">
+    <div v-else-if="citas.length === 0" class="empty-state">
       No hay citas registradas. Agenda una nueva para comenzar.
     </div>
     <table v-else class="table">
@@ -70,11 +70,11 @@
         </tr>
       </thead>
       <tbody>
-        <tr v-for="app in appointments" :key="app.id">
+        <tr v-for="app in citas" :key="app.id">
           <td>{{ app.id }}</td>
-          <td>{{ app.appointmentDate }}</td>
-          <td>{{ app.doctorName }}</td>
-          <td>{{ app.patientName }}</td>
+          <td>{{ formatFecha(app.fechaCita) }}</td>
+          <td>{{ app.doctor }}</td>
+          <td>{{ app.paciente }}</td>
           <td>
             <span
               :class="[
@@ -91,7 +91,7 @@
               class="btn-danger"
               style="font-size: 0.8rem"
             >
-              Cancel
+              Cancelar
             </button>
           </td>
         </tr>
@@ -111,13 +111,13 @@ import {
 export default {
   data() {
     return {
-      appointments: [],
+      citas: [],
       doctors: [],
-      patients: [],
-      newAppointment: {
-        appointmentDate: "",
+      pacientes: [],
+      nuevaCita: {
+        fechaCita: "",
         doctorId: "",
-        patientId: "",
+        pacienteId: "",
       },
       minDateTime: "",
       message: null,
@@ -130,12 +130,9 @@ export default {
       this.loading = true;
       this.error = null;
       try {
-        this.appointments = await getAppointments();
+        this.citas = await getAppointments();
         if (!silent) {
-          this.showMessage(
-            `${this.appointments.length} cita(s) cargada(s)`,
-            "info",
-          );
+          this.showMessage(`${this.citas.length} cita(s) cargada(s)`, "info");
         }
       } catch (error) {
         this.error = "Error al cargar citas";
@@ -148,24 +145,22 @@ export default {
       this.loading = true;
       try {
         if (
-          !this.newAppointment.doctorId ||
-          !this.newAppointment.patientId ||
-          !this.newAppointment.appointmentDate
+          !this.nuevaCita.doctorId ||
+          !this.nuevaCita.pacienteId ||
+          !this.nuevaCita.fechaCita
         ) {
           this.showMessage("Completa doctor, paciente y fecha.", "info");
           return;
         }
         const body = {
-          appointmentDate: this.formatDateTimeForApi(
-            this.newAppointment.appointmentDate,
-          ),
-          doctorId: this.newAppointment.doctorId,
-          patientId: this.newAppointment.patientId,
+          fechaCita: this.formatDateTimeForApi(this.nuevaCita.fechaCita),
+          doctorId: this.nuevaCita.doctorId,
+          pacienteId: this.nuevaCita.pacienteId,
         };
         await createAppointment(body);
-        this.newAppointment.doctorId = "";
-        this.newAppointment.patientId = "";
-        this.newAppointment.appointmentDate = "";
+        this.nuevaCita.doctorId = "";
+        this.nuevaCita.pacienteId = "";
+        this.nuevaCita.fechaCita = "";
         this.showMessage("Cita agendada correctamente", "success");
         await this.getAll(true);
       } catch (error) {
@@ -195,9 +190,9 @@ export default {
           getDoctors(),
           getPatients(),
         ]);
-        this.appointments = appointments;
+        this.citas = appointments;
         this.doctors = doctors;
-        this.patients = patients;
+        this.pacientes = patients;
       } catch (error) {
         this.error = "Error al cargar datos";
         this.showMessage("Error al cargar datos", "error");
@@ -216,6 +211,18 @@ export default {
         return "";
       }
       return value.length === 16 ? `${value}:00` : value;
+    },
+    formatFecha(fechaStr) {
+      if (!fechaStr) return "";
+      const fecha = new Date(fechaStr);
+      const opciones = {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+      };
+      return fecha.toLocaleString("es-ES", opciones);
     },
     setMinDateTime() {
       const now = new Date();

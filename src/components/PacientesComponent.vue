@@ -1,6 +1,6 @@
 <template lang="">
   <div class="container">
-    <h2>Doctors</h2>
+    <h2>Pacientes</h2>
     <p class="page-subtitle">
       Gestiona pacientes y mantén su informacion actualizada.
     </p>
@@ -12,28 +12,28 @@
       </div>
       <form @submit.prevent="savePatient">
         <input
-          v-model="newPatient.firstName"
+          v-model="nuevoPaciente.nombre"
           type="text"
           placeholder="Nombre"
         />
         <input
-          v-model="newPatient.lastName"
+          v-model="nuevoPaciente.apellido"
           type="text"
           placeholder="Apellido"
         />
         <input
-          v-model="newPatient.birthDate"
-          type="text"
-          placeholder="Fehca de nacimiento"
+          v-model="nuevoPaciente.fechaNacimiento"
+          type="date"
+          placeholder="Fecha de nacimiento"
         />
-        <input v-model="newPatient.email" type="email" placeholder="Email" />
+        <input v-model="nuevoPaciente.email" type="email" placeholder="Email" />
         <input
-          v-model="newPatient.phoneNumber"
+          v-model="nuevoPaciente.telefono"
           type="text"
           placeholder="Celular"
         />
         <input
-          v-model="newPatient.address"
+          v-model="nuevoPaciente.direccion"
           type="text"
           placeholder="Direccion"
         />
@@ -49,28 +49,28 @@
       </div>
       <div v-if="loading" class="loading-state">Cargando pacientes...</div>
       <div v-else-if="error" class="message error">{{ error }}</div>
-      <div v-else-if="patients && patients.length === 0" class="empty-state">
+      <div v-else-if="pacientes && pacientes.length === 0" class="empty-state">
         No hay pacientes registrados. Agrega uno nuevo para comenzar.
       </div>
-      <table v-else-if="patients && patients.length" class="table">
+      <table v-else-if="pacientes && pacientes.length" class="table">
         <thead>
           <tr>
             <th>ID</th>
             <th>Nombre</th>
-            <th>Fehca de nacimiento</th>
+            <th>Fecha de nacimiento</th>
             <th>Email</th>
             <th>Telefono</th>
             <th>Direccion</th>
           </tr>
         </thead>
         <tbody>
-          <tr v-for="pat in patients">
+          <tr v-for="pat in pacientes" :key="pat.id">
             <td>{{ pat.id }}</td>
-            <td>{{ pat.firstName }} {{ pat.lastName }}</td>
-            <td>{{ pat.birthDate }}</td>
+            <td>{{ pat.nombre }} {{ pat.apellido }}</td>
+            <td>{{ pat.fechaNacimiento }}</td>
             <td>{{ pat.email }}</td>
-            <td>{{ pat.phoneNumber }}</td>
-            <td>{{ pat.address }}</td>
+            <td>{{ pat.telefono }}</td>
+            <td>{{ pat.direccion }}</td>
           </tr>
         </tbody>
       </table>
@@ -84,15 +84,15 @@ import { createPatient, getPatients } from "@/clients/MedicalClient";
 export default {
   data() {
     return {
-      patients: null,
+      pacientes: null,
       loading: false,
-      newPatient: {
-        firstName: "",
-        lastName: "",
-        birthDate: "",
-        phoneNumber: "",
+      nuevoPaciente: {
+        nombre: "",
+        apellido: "",
+        fechaNacimiento: "",
+        telefono: "",
         email: "",
-        address: "",
+        direccion: "",
       },
       error: null,
       statusMessage: "",
@@ -105,10 +105,10 @@ export default {
         this.loading = true;
         this.error = null;
         const res = await getPatients();
-        this.patients = res;
+        this.pacientes = res;
       } catch (error) {
         this.error = "Error: " + error.message;
-        this.doctors = null;
+        this.pacientes = null;
       } finally {
         this.loading = false;
       }
@@ -117,21 +117,38 @@ export default {
       try {
         this.statusMessage = "";
         const body = {
-          firstName: this.newPatient.firstName,
-          lastName: this.newPatient.lastName,
-          //birthDate: this.newPatient.birthDate,
-          email: this.newPatient.email,
-          phoneNumber: this.newPatient.phoneNumber,
-          address: this.newPatient.address,
+          nombre: this.nuevoPaciente.nombre,
+          apellido: this.nuevoPaciente.apellido,
+          fechaNacimiento: this.nuevoPaciente.fechaNacimiento,
+          email: this.nuevoPaciente.email,
+          telefono: this.nuevoPaciente.telefono,
+          direccion: this.nuevoPaciente.direccion,
         };
         await createPatient(body);
+        
+        // Limpiar formulario
+        this.nuevoPaciente = {
+          nombre: "",
+          apellido: "",
+          fechaNacimiento: "",
+          telefono: "",
+          email: "",
+          direccion: "",
+        };
+        
         this.statusType = "success";
         this.statusMessage = "Paciente registrado correctamente.";
+        
+        await this.getAll();
       } catch (error) {
         this.statusType = "error";
-        this.statusMessage = "No se pudo registrar el paciente.";
+        this.statusMessage = "No se pudo registrar el paciente. " + (error.response?.data?.message || error.message);
+        console.error("Error al guardar paciente:", error);
       }
     },
+  },
+  mounted() {
+    this.getAll();
   },
 };
 </script>

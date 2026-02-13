@@ -3,7 +3,9 @@
     <header class="dashboard-header">
       <div>
         <h1>Bienvenido Administrador 👋</h1>
-        <p class="subtitle">Aquí está lo que está sucediendo en su clínica hoy.</p>
+        <p class="subtitle">
+          Aquí está lo que está sucediendo en su clínica hoy.
+        </p>
       </div>
       <div class="date-badge">
         {{ currentDate }}
@@ -67,15 +69,15 @@
             class="appointment-item"
           >
             <div class="app-date">
-              <span class="day">{{ getDay(app.appointmentDate) }}</span>
-              <span class="month">{{ getMonth(app.appointmentDate) }}</span>
+              <span class="day">{{ getDay(app.fechaCita) }}</span>
+              <span class="month">{{ getMonth(app.fechaCita) }}</span>
             </div>
             <div class="app-details">
-              <strong>Dr. {{ app.doctorName }}</strong>
-              <span>Paciente: {{ app.patientName }}</span>
+              <strong>Dr. {{ app.doctor }}</strong>
+              <span>Paciente: {{ app.paciente }}</span>
             </div>
             <div class="app-status">
-              {{ getTime(app.appointmentDate) }}
+              {{ getTime(app.fechaCita) }}
             </div>
           </li>
         </ul>
@@ -103,7 +105,7 @@ export default {
       },
       appointments: [],
       loading: true,
-      currentDate: new Date().toLocaleDateString("en-US", {
+      currentDate: new Date().toLocaleDateString("es-ES", {
         weekday: "long",
         year: "numeric",
         month: "long",
@@ -115,13 +117,11 @@ export default {
     this.loadDashboardData();
   },
   computed: {
-    // Lógica para mostrar solo las próximas 3 citas activas
+    // Lógica para mostrar solo las próximas 3 citas programadas
     upcomingAppointments() {
       return this.appointments
-        .filter((app) => app.status === "ACTIVE") // Solo activas
-        .sort(
-          (a, b) => new Date(a.appointmentDate) - new Date(b.appointmentDate),
-        ) // Ordenar por fecha
+        .filter((app) => app.status === "PROGRAMADA") // Solo programadas
+        .sort((a, b) => new Date(a.fechaCita) - new Date(b.fechaCita)) // Ordenar por fecha
         .slice(0, 3); // Tomar solo las 3 primeras
     },
   },
@@ -139,9 +139,9 @@ export default {
         this.stats.patients = pats.length;
         this.appointments = apps;
 
-        // Calculamos citas activas
+        // Calculamos citas programadas
         this.stats.activeAppointments = apps.filter(
-          (a) => a.status === "ACTIVE",
+          (a) => a.status === "PROGRAMADA",
         ).length;
       } catch (error) {
         console.error("Error loading dashboard", error);
@@ -154,10 +154,10 @@ export default {
       return new Date(dateStr).getDate();
     },
     getMonth(dateStr) {
-      return new Date(dateStr).toLocaleString("en-US", { month: "short" });
+      return new Date(dateStr).toLocaleString("es-ES", { month: "short" });
     },
     getTime(dateStr) {
-      return new Date(dateStr).toLocaleTimeString("en-US", {
+      return new Date(dateStr).toLocaleTimeString("es-ES", {
         hour: "2-digit",
         minute: "2-digit",
       });

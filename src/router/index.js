@@ -21,7 +21,7 @@ const router = createRouter({
     {
       path: '/appointments',
       name: 'appointments',
-      component: () => import('../views/AppointmentsView.vue'),
+      component: () => import('../views/CitasView.vue'),
       meta: {
         requireAuthorization: true,
       }
@@ -29,7 +29,7 @@ const router = createRouter({
     {
       path: '/doctors',
       name: 'doctors',
-      component: () => import('../views/DoctorsView.vue'),
+      component: () => import('../views/DoctoresView.vue'),
       meta: {
         requireAuthorization: true,
       }
@@ -37,7 +37,7 @@ const router = createRouter({
     {
       path: '/patients',
       name: 'patients',
-      component: () => import('../views/PatientsView.vue'),
+      component: () => import('../views/PacientesView.vue'),
       meta: {
         requireAuthorization: true,
       }

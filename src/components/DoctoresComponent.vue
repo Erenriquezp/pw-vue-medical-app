@@ -12,27 +12,27 @@
       <form @submit.prevent="saveDoctor" class="form-grid">
         <div class="form-group">
           <label>Nombre:</label>
-          <input v-model="newDoctor.firstName" type="text" required />
+          <input v-model="nuevoDoctor.nombre" type="text" required />
         </div>
         <div class="form-group">
           <label>Apellido:</label>
-          <input v-model="newDoctor.lastName" type="text" required />
+          <input v-model="nuevoDoctor.apellido" type="text" required />
         </div>
         <div class="form-group">
           <label>Especialidad:</label>
-          <input v-model="newDoctor.specialty" type="text" required />
+          <input v-model="nuevoDoctor.especialidad" type="text" required />
         </div>
         <div class="form-group">
           <label>Email:</label>
-          <input v-model="newDoctor.email" type="email" required />
+          <input v-model="nuevoDoctor.email" type="email" required />
         </div>
         <div class="form-group">
           <label>Telefono:</label>
-          <input v-model="newDoctor.phoneNumber" type="text" />
+          <input v-model="nuevoDoctor.telefono" type="text" />
         </div>
         <div class="form-group">
           <label>Numero de oficina:</label>
-          <input v-model="newDoctor.officeNumber" type="text" />
+          <input v-model="nuevoDoctor.numOficina" type="text" />
         </div>
 
         <button class="btn-primary full-width" type="submit">
@@ -47,21 +47,21 @@
         <thead>
           <tr>
             <th>ID</th>
-            <th>Name</th>
-            <th>Specialty</th>
+            <th>Nombre</th>
+            <th>Especialidad</th>
             <th>Email</th>
-            <th>Phone</th>
-            <th>Office Phone</th>
+            <th>Telefono</th>
+            <th>Oficina</th>
           </tr>
         </thead>
         <tbody>
-          <tr v-for="doc in doctors">
+          <tr v-for="doc in doctors" :key="doc.id">
             <td>{{ doc.id }}</td>
-            <td>{{ doc.firstName }} {{ doc.lastName }}</td>
-            <td>{{ doc.specialty }}</td>
+            <td>{{ doc.nombre }} {{ doc.apellido }}</td>
+            <td>{{ doc.especialidad }}</td>
             <td>{{ doc.email }}</td>
-            <td>{{ doc.phoneNumber }}</td>
-            <td>{{ doc.officeNumber }}</td>
+            <td>{{ doc.telefono }}</td>
+            <td>{{ doc.numOficina }}</td>
           </tr>
         </tbody>
       </table>
@@ -76,13 +76,13 @@ export default {
   data() {
     return {
       doctors: [],
-      newDoctor: {
-        firstName: "",
-        lastName: "",
-        specialty: "",
+      nuevoDoctor: {
+        nombre: "",
+        apellido: "",
+        especialidad: "",
         email: "",
-        phoneNumber: "",
-        officeNumber: "",
+        telefono: "",
+        numOficina: "",
       },
       message: null,
       loading: false,
@@ -97,25 +97,33 @@ export default {
       } catch (error) {
         this.showMessage("Error al cargar doctores", "error");
         console.error("Error loading doctors:", error);
+      } finally {
+        this.loading = false;
       }
     },
     async saveDoctor() {
       this.loading = true;
       try {
-        await createDoctor(this.newDoctor);
-        this.showMessage("Doctor registrado exitosamente", "success");
-
-        this.newDoctor = {
-          firstName: "",
-          lastName: "",
-          specialty: "",
+        await createDoctor(this.nuevoDoctor);
+        
+        // Limpiar formulario
+        this.nuevoDoctor = {
+          nombre: "",
+          apellido: "",
+          especialidad: "",
           email: "",
-          phoneNumber: "",
-          officeNumber: "",
+          telefono: "",
+          numOficina: "",
         };
+        
+        this.showMessage("Doctor registrado exitosamente", "success");
+        
+        // Recargar lista
+        await this.getAll();
       } catch (error) {
         this.showMessage("Error al guardar doctor", "error");
         console.error("Error saving doctor:", error);
+      } finally {
         this.loading = false;
       }
     },

@@ -12,10 +12,25 @@
     />
 
     <div class="card">
-      <div>
-        <h4>Agendar Nueva Cita</h4>
+      <div class="card-header">
         <div>
-          <button class="btn-primary" @click="openModal">Agendar Cita</button>
+          <h4>Citas Registradas</h4>
+          <p class="header-subtitle">
+            Consulta, agenda y gestiona citas médicas
+          </p>
+        </div>
+        <div class="header-actions">
+          <button
+            class="btn-refresh"
+            @click="loadAllData()"
+            title="Actualizar lista"
+          >
+            🔄
+          </button>
+          <button class="btn-add" @click="openModal">
+            <span class="btn-icon">📅</span>
+            <span class="btn-text">Agendar Cita</span>
+          </button>
         </div>
       </div>
 
@@ -23,14 +38,16 @@
       <div v-if="showModal" class="modal-overlay" @click.self="closeModal">
         <div class="modal">
           <header class="modal-header">
-            <h4>Agendar Cita</h4>
+            <h4>{{ isEditing ? 'Editar Cita' : 'Agendar Cita' }}</h4>
             <button class="close" @click="closeModal">✕</button>
           </header>
           <section class="modal-body">
             <GenericForm
+              :key="isEditing ? `edit-${editingId}` : 'new'"
               :fields="citaFields"
               :initial="nuevaCita"
-              submitLabel="Agendar Cita"
+              :submitLabel="isEditing ? 'Actualizar Cita' : 'Agendar Cita'"
+              :showCancel="true"
               @submit="handleFormSubmit"
               @cancel="closeModal"
             />
@@ -44,29 +61,50 @@
     <div v-if="loading" class="loading-state">Cargando citas...</div>
     <div v-else-if="error" class="message error">{{ error }}</div>
     <div v-else-if="citas.length === 0" class="empty-state">
-      No hay citas registradas. Agenda una nueva para comenzar.
+      No hay citas registradas. Agrega una nueva para comenzar.
     </div>
 
-    <GenericTable :columns="citaColumns" :rows="citas" key-field="id">
+    <GenericTable v-else :columns="citaColumns" :rows="citas" key-field="id">
       <template #cell="{ row, col }">
         <template v-if="col.field === 'status'">
           <span
             :class="[
               'badge',
-              row.status === 'ACTIVE' ? 'bg-active' : 'bg-inactive'
+              row.status === 'ACTIVA' ? 'bg-active' : 'bg-inactive'
             ]"
           >
             {{ row.status }}
           </span>
         </template>
-        <template v-else-if="col.field === 'action'">
-          <button
-            @click="cancel(row.id)"
-            class="btn-danger"
-            style="font-size: 0.8rem"
-          >
-            Cancelar
-          </button>
+        <template v-else-if="col.field === 'actions'">
+          <div class="action-buttons">
+            <button
+              @click="editCita(row)"
+              class="btn-action btn-edit"
+              :class="{ 'btn-disabled': row.status !== 'ACTIVA' }"
+              :disabled="row.status !== 'ACTIVA'"
+              :title="
+                row.status !== 'ACTIVA'
+                  ? 'No se puede editar una cita inactiva'
+                  : 'Editar'
+              "
+            >
+              ✏️
+            </button>
+            <button
+              @click="cancelCita(row.id)"
+              class="btn-action btn-cancel"
+              :class="{ 'btn-disabled': row.status !== 'ACTIVA' }"
+              :disabled="row.status !== 'ACTIVA'"
+              :title="
+                row.status !== 'ACTIVA'
+                  ? 'No se puede cancelar una cita inactiva'
+                  : 'Cancelar'
+              "
+            >
+              ❌
+            </button>
+          </div>
         </template>
         <template v-else>
           {{ row[col.field] }}
@@ -82,7 +120,8 @@ import {
   createAppointmentFacade,
   getAppointmentsFacade,
   getDoctorsFacade,
-  getPatientsFacade
+  getPatientsFacade,
+  updateAppointmentFacade
 } from '@/clients/MedicalClient'
 import MessageComponent from '@/components/MessageComponent.vue'
 import GenericForm from '@/components/GenericForm.vue'
@@ -105,6 +144,8 @@ export default {
       loading: false,
       error: null,
       showModal: false,
+      isEditing: false,
+      editingId: null,
       citaFields: [
         {
           name: 'doctorId',
@@ -139,16 +180,21 @@ export default {
         { label: 'Doctor', field: 'doctor' },
         { label: 'Paciente', field: 'paciente' },
         { label: 'Estado', field: 'status' },
-        { label: 'Accion', field: 'action' }
+        { label: 'Acciones', field: 'actions' }
       ]
     }
   },
   methods: {
     openModal() {
+      this.isEditing = false
+      this.editingId = null
+      this.nuevaCita = { fechaCita: '', doctorId: '', pacienteId: '' }
       this.showModal = true
     },
     closeModal() {
       this.showModal = false
+      this.isEditing = false
+      this.editingId = null
       this.nuevaCita = { fechaCita: '', doctorId: '', pacienteId: '' }
     },
     async getAll(silent = false) {
@@ -160,8 +206,8 @@ export default {
         this.citas = this.citas.map((c) => ({
           ...c,
           fechaCita: this.formatFecha(c.fechaCita),
-          doctor: c.doctorName || `${c.doctorNombre || ''}`,
-          paciente: c.pacienteName || `${c.pacienteNombre || ''}`
+          doctor: c.doctor || `${c.doctorNombre || ''}`,
+          paciente: c.paciente || `${c.pacienteNombre || ''}`
         }))
         if (!silent)
           this.showMessage(`${this.citas.length} cita(s) cargada(s)`, 'info')
@@ -189,30 +235,83 @@ export default {
           this.showMessage('Completa doctor, paciente y fecha.', 'info')
           return
         }
-        const body = {
-          fechaCita: this.formatDateTimeForApi(payload.fechaCita),
-          doctorId: payload.doctorId,
-          pacienteId: payload.pacienteId
+
+        if (this.isEditing) {
+          const body = {
+            fechaCita: this.formatDateTimeForApi(payload.fechaCita),
+            doctorId: payload.doctorId,
+            pacienteId: payload.pacienteId
+          }
+          await updateAppointmentFacade(this.editingId, body)
+          this.showMessage('Cita actualizada correctamente', 'success')
+          await this.getAll(true)
+        } else {
+          const body = {
+            fechaCita: this.formatDateTimeForApi(payload.fechaCita),
+            doctorId: payload.doctorId,
+            pacienteId: payload.pacienteId
+          }
+          await createAppointmentFacade(body)
+          this.showMessage('Cita agendada correctamente', 'success')
+          await this.getAll(true)
         }
-        await createAppointmentFacade(body)
-        this.nuevaCita = { fechaCita: '', doctorId: '', pacienteId: '' }
-        this.showMessage('Cita agendada correctamente', 'success')
+
         this.closeModal()
-        await this.getAll(true)
       } catch (error) {
-        this.showMessage('No se pudo agendar la cita', 'error')
+        this.showMessage(
+          `No se pudo ${this.isEditing ? 'actualizar' : 'agendar'} la cita`,
+          'error'
+        )
       } finally {
         this.loading = false
       }
     },
-    async cancel(id) {
+    editCita(cita) {
+      // Validar que la cita esté activa
+      if (cita.status !== 'ACTIVA') {
+        this.showMessage('No se puede editar una cita inactiva', 'error')
+        return
+      }
+
+      this.isEditing = true
+      this.editingId = cita.id
+
+      // Convertir la fecha formateada de vuelta a datetime-local format
+      // Si viene como "2024-01-15 10:30", necesitamos "2024-01-15T10:30"
+      let fechaFormatted = cita.fechaCita
+      if (cita.fechaCita && !cita.fechaCita.includes('T')) {
+        fechaFormatted = cita.fechaCita.replace(' ', 'T')
+      }
+
+      this.nuevaCita = {
+        fechaCita: fechaFormatted,
+        doctorId: cita.doctorId,
+        pacienteId: cita.pacienteId
+      }
+      this.showModal = true
+    },
+    async cancelCita(id) {
+      // Buscar la cita para validar su estado
+      const cita = this.citas.find((c) => c.id === id)
+      if (cita && cita.status !== 'ACTIVA') {
+        this.showMessage(
+          'No se puede cancelar una cita que ya está inactiva',
+          'error'
+        )
+        return
+      }
+
       this.loading = true
       try {
         await cancelAppointmentFacade(id)
-        this.showMessage('Cita cancelada', 'success')
-        await this.getAll(true)
+        this.showMessage('Cita cancelada correctamente', 'success')
+        await this.loadAllData()
       } catch (error) {
-        this.showMessage('No se pudo cancelar la cita', 'error')
+        this.showMessage(
+          'No se pudo cancelar la cita. ' + (error.message || ''),
+          'error'
+        )
+        console.error('Error al cancelar cita:', error)
       } finally {
         this.loading = false
       }
@@ -226,7 +325,12 @@ export default {
           getDoctorsFacade(),
           getPatientsFacade()
         ])
-        this.citas = appointments.map((c) => ({ ...c }))
+        this.citas = appointments.map((c) => ({
+          ...c,
+          fechaCita: this.formatFecha(c.fechaCita),
+          doctor: c.doctorName || c.doctor || `${c.doctorNombre || ''}`,
+          paciente: c.pacienteName || c.paciente || `${c.pacienteNombre || ''}`
+        }))
         this.doctors = doctors
         this.pacientes = patients
         this.showMessage(
@@ -296,8 +400,14 @@ h3,
 h4 {
   font-size: 1.2rem;
   font-weight: 600;
-  margin: 24px 0 8px;
+  margin: 0 0 4px 0;
   color: var(--color-text);
+}
+
+.header-subtitle {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+  margin: 0;
 }
 
 .helper-text {
@@ -313,6 +423,78 @@ h4 {
   border: 1px solid var(--color-border);
   box-shadow: var(--shadow-2);
   margin-bottom: 20px;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.header-actions {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.btn-add {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: linear-gradient(135deg, #0b6bcb 0%, #1a7fd5 100%);
+  color: white;
+  font-size: 0.9rem;
+  font-weight: 600;
+  padding: 0.65rem 1.25rem;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(11, 107, 203, 0.2);
+}
+
+.btn-add:hover {
+  background: linear-gradient(135deg, #0a5bb5 0%, #1670c0 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(11, 107, 203, 0.3);
+}
+
+.btn-add:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 6px rgba(11, 107, 203, 0.2);
+}
+
+.btn-icon {
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+.btn-text {
+  line-height: 1;
+}
+
+.btn-refresh {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-strong);
+  border-radius: 10px;
+  font-size: 1.3rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-refresh:hover {
+  background: rgba(11, 107, 203, 0.08);
+  border-color: var(--color-primary);
+  transform: rotate(180deg);
+}
+
+.btn-refresh:active {
+  transform: rotate(180deg) scale(0.95);
 }
 
 .btn-primary {
@@ -455,6 +637,57 @@ h4 {
   background: rgba(198, 40, 40, 0.12);
   border-color: rgba(198, 40, 40, 0.3);
   color: var(--color-text);
+}
+
+/* Botones de acción en la tabla */
+.action-buttons {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+}
+
+.btn-action {
+  background: transparent;
+  border: 1px solid var(--color-border-strong);
+  padding: 0.35rem 0.6rem;
+  border-radius: var(--radius-sm);
+  font-size: 1rem;
+  cursor: pointer;
+  transition:
+    border 0.2s ease,
+    background 0.2s ease,
+    transform 0.2s ease;
+}
+
+.btn-action:hover {
+  transform: scale(1.1);
+}
+
+.btn-edit:hover {
+  border-color: var(--color-primary);
+  background: rgba(11, 107, 203, 0.08);
+}
+
+.btn-cancel:hover {
+  border-color: var(--color-danger);
+  background: rgba(198, 40, 40, 0.08);
+}
+
+.btn-delete:hover {
+  border-color: var(--color-danger);
+  background: rgba(198, 40, 40, 0.08);
+}
+
+.btn-disabled {
+  opacity: 0.4;
+  cursor: not-allowed !important;
+  pointer-events: none;
+}
+
+.btn-disabled:hover {
+  transform: none !important;
+  border-color: var(--color-border-strong) !important;
+  background: transparent !important;
 }
 
 .message.info {

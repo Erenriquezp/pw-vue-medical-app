@@ -11,35 +11,49 @@
     />
 
     <div class="card">
-      <div
-        style="
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-        "
-      >
-        <h3>Pacientes</h3>
+      <div class="card-header">
         <div>
-          <button class="btn-primary" @click="openModal">Nuevo Paciente</button>
+          <h3>Pacientes Registrados</h3>
+          <p class="header-subtitle">
+            Administra la información de los pacientes
+          </p>
+        </div>
+        <div class="header-actions">
+          <button
+            class="btn-refresh"
+            @click="getAll()"
+            title="Actualizar lista"
+          >
+            🔄
+          </button>
+          <button class="btn-add" @click="openModal">
+            <span class="btn-icon">👤</span>
+            <span class="btn-text">Nuevo Paciente</span>
+          </button>
         </div>
       </div>
-      <p class="helper-text">Completa los datos basicos antes de guardar.</p>
-      <div v-if="showModal" class="modal-overlay" @click.self="closeModal">
-        <div class="modal">
-          <header class="modal-header">
-            <h4>Registrar Paciente</h4>
-            <button class="close" @click="closeModal">✕</button>
-          </header>
-          <section class="modal-body">
-            <GenericForm
-              :fields="pacienteFields"
-              :initial="nuevoPaciente"
-              submitLabel="Guardar Paciente"
-              @submit="handleFormSubmit"
-              @cancel="closeModal"
-            />
-          </section>
-        </div>
+    </div>
+
+    <!-- Modal para el formulario -->
+    <div v-if="showModal" class="modal-overlay" @click.self="closeModal">
+      <div class="modal">
+        <header class="modal-header">
+          <h4>{{ isEditing ? 'Editar Paciente' : 'Registrar Paciente' }}</h4>
+          <button class="close" @click="closeModal">✕</button>
+        </header>
+        <section class="modal-body">
+          <GenericForm
+            :key="isEditing ? `edit-${editingId}` : 'new'"
+            :fields="pacienteFields"
+            :initial="nuevoPaciente"
+            :submitLabel="
+              isEditing ? 'Actualizar Paciente' : 'Guardar Paciente'
+            "
+            :showCancel="true"
+            @submit="handleFormSubmit"
+            @cancel="closeModal"
+          />
+        </section>
       </div>
     </div>
 
@@ -50,7 +64,7 @@
 
       <div v-if="loading" class="loading-state">Cargando pacientes...</div>
       <div v-else-if="error" class="message error">{{ error }}</div>
-      <div v-else-if="pacientes && pacientes.length === 0" class="empty-state">
+      <div v-else-if="!pacientes || pacientes.length === 0" class="empty-state">
         No hay pacientes registrados. Agrega uno nuevo para comenzar.
       </div>
 
@@ -59,13 +73,64 @@
         :columns="pacienteColumns"
         :rows="pacientes"
         key-field="id"
-      />
+      >
+        <template #cell="{ row, col }">
+          <template v-if="col.field === 'status'">
+            <span
+              :class="[
+                'badge',
+                row.status === 'ACTIVO' ? 'bg-active' : 'bg-inactive'
+              ]"
+            >
+              {{ row.status }}
+            </span>
+          </template>
+          <template v-else-if="col.field === 'actions'">
+            <div class="action-buttons">
+              <button
+                @click="editPaciente(row)"
+                class="btn-action btn-edit"
+                :class="{ 'btn-disabled': row.status !== 'ACTIVO' }"
+                :disabled="row.status !== 'ACTIVO'"
+                :title="
+                  row.status !== 'ACTIVO'
+                    ? 'No se puede editar un paciente inactivo'
+                    : 'Editar'
+                "
+              >
+                ✏️
+              </button>
+              <button
+                @click="deletePaciente(row.id)"
+                class="btn-action btn-delete"
+                :class="{ 'btn-disabled': row.status !== 'ACTIVO' }"
+                :disabled="row.status !== 'ACTIVO'"
+                :title="
+                  row.status !== 'ACTIVO'
+                    ? 'No se puede eliminar un paciente inactivo'
+                    : 'Eliminar'
+                "
+              >
+                ❌
+              </button>
+            </div>
+          </template>
+          <template v-else>
+            {{ row[col.field] }}
+          </template>
+        </template>
+      </GenericTable>
     </div>
   </div>
 </template>
 
 <script>
-import { createPatientFacade, getPatientsFacade } from '@/clients/MedicalClient'
+import {
+  createPatientFacade,
+  deletePatientFacade,
+  getPatientsFacade,
+  updatePatientFacade
+} from '@/clients/MedicalClient'
 import GenericForm from '@/components/GenericForm.vue'
 import GenericTable from '@/components/GenericTable.vue'
 import MessageComponent from '@/components/MessageComponent.vue'
@@ -87,6 +152,8 @@ export default {
       message: null,
       error: null,
       showModal: false,
+      isEditing: false,
+      editingId: null,
       pacienteFields: [
         { name: 'nombre', label: 'Nombre', type: 'text' },
         { name: 'apellido', label: 'Apellido', type: 'text' },
@@ -101,17 +168,31 @@ export default {
         { label: 'Fecha de nacimiento', field: 'fechaNacimiento' },
         { label: 'Email', field: 'email' },
         { label: 'Telefono', field: 'telefono' },
-        { label: 'Direccion', field: 'direccion' }
+        { label: 'Direccion', field: 'direccion' },
+        { label: 'Estado', field: 'status' },
+        { label: 'Acciones', field: 'actions' }
       ]
     }
   },
   methods: {
     openModal() {
-      this.showModal = true
+      this.isEditing = false
+      this.editingId = null
+      this.nuevoPaciente = {
+        nombre: '',
+        apellido: '',
+        fechaNacimiento: '',
+        telefono: '',
+        email: '',
+        direccion: ''
+      }
       this.message = null
+      this.showModal = true
     },
     closeModal() {
       this.showModal = false
+      this.isEditing = false
+      this.editingId = null
       // reset form state
       this.nuevoPaciente = {
         nombre: '',
@@ -120,6 +201,55 @@ export default {
         telefono: '',
         email: '',
         direccion: ''
+      }
+    },
+    editPaciente(paciente) {
+      // Validar que el paciente esté activo
+      if (paciente.status !== 'ACTIVO') {
+        this.showMessage('No se puede editar un paciente inactivo', 'error')
+        return
+      }
+
+      this.isEditing = true
+      this.editingId = paciente.id
+      this.nuevoPaciente = {
+        nombre: paciente.nombre,
+        apellido: paciente.apellido,
+        fechaNacimiento: paciente.fechaNacimiento,
+        telefono: paciente.telefono,
+        email: paciente.email,
+        direccion: paciente.direccion
+      }
+      this.showModal = true
+    },
+    async deletePaciente(id) {
+      // Buscar el paciente para validar su estado
+      const paciente = this.pacientes.find((p) => p.id === id)
+      if (paciente && paciente.status !== 'ACTIVO') {
+        this.showMessage(
+          'No se puede eliminar un paciente que está inactivo',
+          'error'
+        )
+        return
+      }
+
+      if (!confirm('¿Estás seguro de que deseas eliminar este paciente?')) {
+        return
+      }
+
+      this.loading = true
+      try {
+        await deletePatientFacade(id)
+        this.showMessage('Paciente eliminado correctamente.', 'success')
+        await this.getAll()
+      } catch (error) {
+        this.showMessage(
+          'No se pudo eliminar el paciente. ' + (error.message || ''),
+          'error'
+        )
+        console.error('Error al eliminar paciente:', error)
+      } finally {
+        this.loading = false
       }
     },
     async getAll() {
@@ -146,13 +276,19 @@ export default {
     },
     async handleFormSubmit(payload) {
       try {
-        await createPatientFacade(payload)
-        this.showMessage('Paciente registrado correctamente.', 'success')
+        if (this.isEditing) {
+          await updatePatientFacade(this.editingId, payload)
+          this.showMessage('Paciente actualizado correctamente.', 'success')
+          await this.getAll()
+        } else {
+          await createPatientFacade(payload)
+          this.showMessage('Paciente registrado correctamente.', 'success')
+          await this.getAll()
+        }
         this.closeModal()
-        await this.getAll()
       } catch (error) {
         this.showMessage(
-          'No se pudo registrar el paciente. ' +
+          `No se pudo ${this.isEditing ? 'actualizar' : 'registrar'} el paciente. ` +
             (error.response?.data?.message || error.message),
           'error'
         )
@@ -196,8 +332,14 @@ h3,
 h4 {
   font-size: 1.2rem;
   font-weight: 600;
-  margin-bottom: 8px;
+  margin-bottom: 4px;
   color: var(--color-text);
+}
+
+.header-subtitle {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+  margin: 0;
 }
 
 .helper-text {
@@ -213,6 +355,78 @@ h4 {
   border: 1px solid var(--color-border);
   box-shadow: var(--shadow-2);
   margin-bottom: 24px;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.header-actions {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.btn-add {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: linear-gradient(135deg, #0b6bcb 0%, #1a7fd5 100%);
+  color: white;
+  font-size: 0.9rem;
+  font-weight: 600;
+  padding: 0.65rem 1.25rem;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(11, 107, 203, 0.2);
+}
+
+.btn-add:hover {
+  background: linear-gradient(135deg, #0a5bb5 0%, #1670c0 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(11, 107, 203, 0.3);
+}
+
+.btn-add:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 6px rgba(11, 107, 203, 0.2);
+}
+
+.btn-icon {
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+.btn-text {
+  line-height: 1;
+}
+
+.btn-refresh {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-strong);
+  border-radius: 10px;
+  font-size: 1.3rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-refresh:hover {
+  background: rgba(11, 107, 203, 0.08);
+  border-color: var(--color-primary);
+  transform: rotate(180deg);
+}
+
+.btn-refresh:active {
+  transform: rotate(180deg) scale(0.95);
 }
 
 .btn-primary {
@@ -421,5 +635,72 @@ h4 {
 }
 .card .button-secondary:first-child {
   margin-top: 0;
+}
+
+/* Botones de acción en la tabla */
+.action-buttons {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+}
+
+.btn-action {
+  background: transparent;
+  border: 1px solid var(--color-border-strong);
+  padding: 0.35rem 0.6rem;
+  border-radius: var(--radius-sm);
+  font-size: 1rem;
+  cursor: pointer;
+  transition:
+    border 0.2s ease,
+    background 0.2s ease,
+    transform 0.2s ease;
+}
+
+.btn-action:hover {
+  transform: scale(1.1);
+}
+
+.btn-edit:hover {
+  border-color: var(--color-primary);
+  background: rgba(11, 107, 203, 0.08);
+}
+
+.btn-delete:hover {
+  border-color: var(--color-danger);
+  background: rgba(198, 40, 40, 0.08);
+}
+
+.btn-disabled {
+  opacity: 0.4;
+  cursor: not-allowed !important;
+  pointer-events: none;
+}
+
+.btn-disabled:hover {
+  transform: none !important;
+  border-color: var(--color-border-strong) !important;
+  background: transparent !important;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+}
+
+.bg-active {
+  background: rgba(26, 163, 168, 0.16);
+  color: var(--color-accent);
+}
+
+.bg-inactive {
+  background: rgba(198, 40, 40, 0.12);
+  color: var(--color-danger);
 }
 </style>

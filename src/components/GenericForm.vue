@@ -6,21 +6,39 @@
       :class="['form-group', { full: field.full }]"
     >
       <label>{{ field.label }}</label>
-      <component
-        :is="field.component || inputType(field.type)"
+
+      <!-- Textarea -->
+      <textarea
+        v-if="field.type === 'textarea'"
         v-model="localModel[field.name]"
         :class="['form-control']"
-        v-bind="componentAttrs(field)"
+        v-bind="field.props"
+      ></textarea>
+
+      <!-- Select -->
+      <select
+        v-else-if="field.type === 'select'"
+        v-model="localModel[field.name]"
+        :class="['form-control']"
+        v-bind="field.props"
       >
         <option
-          v-if="inputType(field.type) === 'select'"
           v-for="opt in resolveOptions(field)"
           :value="opt.value"
           :key="opt.value"
         >
           {{ opt.label }}
         </option>
-      </component>
+      </select>
+
+      <!-- Input (default) -->
+      <input
+        v-else
+        v-model="localModel[field.name]"
+        :type="field.type || 'text'"
+        :class="['form-control']"
+        v-bind="field.props"
+      />
     </div>
 
     <div class="form-actions">
@@ -49,38 +67,32 @@ export default {
   emits: ['submit', 'cancel'],
   data() {
     return {
-      localModel: { ...this.initial }
+      localModel: {}
     }
+  },
+  created() {
+    // Inicializar localModel con los valores de initial
+    this.resetForm()
   },
   watch: {
     initial: {
-      handler(v) {
-        this.localModel = { ...v }
+      handler() {
+        this.resetForm()
       },
       deep: true
     }
   },
   methods: {
-    inputType(type) {
-      // map simple types to HTML elements
-      if (type === 'textarea') return 'textarea'
-      if (type === 'select') return 'select'
-      return 'input'
-    },
-    inputAttrs(field) {
-      const t = this.inputType(field.type)
-      const attrs = {}
-      if (t === 'input') {
-        attrs.type = field.type === 'date' ? 'date' : field.type
-      }
-      // allow passing additional attributes via field.props
-      return attrs
-    },
-    componentAttrs(field) {
-      const props = field.props || {}
-      const attrs = this.inputAttrs(field) || {}
-      // merge props and attrs (props take precedence)
-      return { ...attrs, ...props }
+    resetForm() {
+      // Crear un nuevo objeto con todos los campos del formulario
+      const newModel = {}
+      this.fields.forEach((field) => {
+        newModel[field.name] =
+          this.initial[field.name] !== undefined ? this.initial[field.name] : ''
+      })
+
+      // Asignar el nuevo objeto completo para forzar reactividad
+      this.localModel = newModel
     },
     resolveOptions(field) {
       const opts = field.options

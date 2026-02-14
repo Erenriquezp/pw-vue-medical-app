@@ -89,6 +89,7 @@ export default {
   },
   methods: {
     handleSubmit() {
+      if (this.loading) return
       this.$emit('submit', this.credentials)
     }
   }

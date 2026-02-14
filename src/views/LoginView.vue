@@ -32,6 +32,7 @@ export default {
   },
   methods: {
     async handleLogin(credentials) {
+      if (this.loading) return
       this.loading = true
       this.errorMessage = null
 
